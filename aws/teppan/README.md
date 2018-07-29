@@ -13,14 +13,15 @@ AWS Teppan Stracture
 
 前提として、以下の設定はすでに行っていることとします。
 
-- 手動で作成済み
+- Terraformがインストールされていること
+  - Ver `v0.11.7` 以上
+  - [ここ](https://www.terraform.io/downloads.html) からダウンロードしてインストール
+- AWS側に手動で作成済み
+  - Route53で「Hosted Zone(DNS情報)」作成
   - ACLにて「ドメインの証明書」
   - EC2インスタンス用のキーペア
 - EC2の「プロビジョニング」は「別途行う」or「ゴールデンイメージ」想定
   - どちらでも行けるように「AMIのIDは設定ファイルに外だし」している
-- Terraformがインストールされていること
-  - Ver `v0.11.7` 以上 
-  - [ここ](https://www.terraform.io/downloads.html) からダウンロードしてインストール
 
 # Known Issues / Improvement
 
