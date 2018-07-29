@@ -5,6 +5,10 @@ AWS Teppan Stracture
 
 俗にAWSな人の言う「鉄板構成」をTerraformでAsCodeしたものです。
 
+# Overview
+
+![overview](doc/overview.png)
+
 # Known Issues / Improvement
 
 - 旧態然とした「メンテナンス用インスタンス」を置いている
@@ -21,3 +25,5 @@ AWS Teppan Stracture
 - 手動で作成済み
   - ACLにて「ドメインの証明書」
   - EC2インスタンス用のキーペア
+- EC2の「プロビジョニング」は「別途行う」or「ゴールデンイメージ」想定
+  - 
