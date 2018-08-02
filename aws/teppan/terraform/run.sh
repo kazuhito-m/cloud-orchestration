@@ -7,7 +7,7 @@ THIS_SCRIPT_PATH=$(cd $(dirname $(readlink -f $0 || echo $0));pwd -P)
 
 cd ${THIS_SCRIPT_PATH}
 
-if [ ! -e ./.terraform ]; then
+if [ ! -d '.terraform' ]; then
   terraform init
 fi
 
@@ -18,4 +18,4 @@ if [ $? -ne 0 ] ; then
   exit 9
 fi
 
-terraform apply -var-file="./settings.tfvars" ./
+# terraform apply -var-file="./settings.tfvars" ./
