@@ -245,7 +245,6 @@ resource "aws_instance" "Ec2Maintenance01Aza" {
     volume_type = "gp2"
     delete_on_termination = true
   }
-  iam_instance_profile = "EC2InstanceRole"
   tags {
     Name = "ec2-maintenance01-aza"
     Role = "maintenance"
@@ -266,7 +265,6 @@ resource "aws_instance" "Ec2Ap01Aza" {
     volume_type = "gp2"
     delete_on_termination = true
   }
-  iam_instance_profile = "EC2InstanceRole"
   tags {
     Name = "ec2-ap01-aza"
     Role = "application"
@@ -287,7 +285,6 @@ resource "aws_instance" "Ec2Ap02Azc" {
     volume_type = "gp2"
     delete_on_termination = true
   }
-  iam_instance_profile = "EC2InstanceRole"
   tags {
     Name = "ec2-ap02-azc"
   }
@@ -305,6 +302,8 @@ resource "aws_lb" "AlbPublic01" {
   subnets         = ["${aws_subnet.SbnApAza.id}", "${aws_subnet.SbnApAzc.id}"]
 }
 
+# 「アプリサーバインスタンス」は、「SpringBootのJavaサーバアプリ」と仮定するため、
+# 8080を前提としているが、対象となる「各種Webサーバ、プロダクト」にあわせて変更する。
 resource "aws_lb_target_group" "TrgPublic01" {
   name     = "trg-public01"
   port     = 8080
@@ -380,9 +379,6 @@ resource "aws_route53_record" "R53MainARecord" {
     name    = "${aws_lb.AlbPublic01.dns_name}"
     zone_id = "${aws_lb.AlbPublic01.zone_id}"
     evaluate_target_health = true
-  }
-  failover_routing_policy {
-    type = "PRIMARY"
   }
 }
 
