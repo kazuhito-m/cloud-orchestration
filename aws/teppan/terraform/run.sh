@@ -11,11 +11,11 @@ if [ ! -d '.terraform' ]; then
   terraform init
 fi
 
-terraform plan -var-file="./settings.tfvars" ./
+terraform plan ./
 
 if [ $? -ne 0 ] ; then
   echo 'ドライラン失敗。実行せず終了します。'
   exit 9
 fi
 
-# terraform apply -var-file="./settings.tfvars" ./
+# terraform apply ./
