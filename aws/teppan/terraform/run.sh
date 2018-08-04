@@ -18,4 +18,4 @@ if [ $? -ne 0 ] ; then
   exit 9
 fi
 
-# terraform apply ./
+terraform apply ./
