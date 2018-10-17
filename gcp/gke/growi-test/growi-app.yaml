@@ -1,0 +1,46 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: growi
+  namespace: growis
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: growi
+      name: growi
+    spec:
+      containers:
+      - name: growi
+        image: asia.gcr.io/kfa-growi-on-gke/growi-for-compose:3.0
+        env:
+        - name: MONGO_URI
+          value: "mongodb://mongo:27017/growi"
+        - name: ELASTICSEARCH_URI
+          value: "http://elasticsearch:9200/growi"
+        - name: PASSWORD_SEED
+          value: "changeme"
+        command: ["dockerize", "-wait", "tcp://mongo:27017", "-wait", "tcp://elasticsearch:9200", "-timeout", "60s", "npm", "run", "server:prod"]
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: growi
+  name: growi
+  namespace: growis
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: growi
+  sessionAffinity: None
+  type: LoadBalancer
+status:
+  loadBalancer: {}
