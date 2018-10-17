@@ -7,7 +7,37 @@ Growi公式が作成している [docker-compose.yaml](https://github.com/weseek
 
 # Instration
 
-まず、
+まず、本家から [Dockerfile](https://github.com/weseek/growi-docker-compose/blob/master/Dockerfile) を落とし、ローカルビルドしたものを、GCPの `Container Registry` に上げる。
+
+```bash
+# 予め、GCPにプロジェクトが作ってあることを前提とする。
+GCP_PROJECT=$(gcloud config get-value project)
+git clone https://github.com/weseek/growi-docker-compose.git growi
+cd growi
+docker build -t asia.gcr.io/$GCP_PROJECT/growi-for-compose:3.0 .
+gcloud docker -- push asia.gcr.io/$GCP_PROJECT/growi-for-compose:3.0
+```
+
+次に、 `kubectl` は当該のプロジェクト/クラスタに設定した後、以下のスクリプトを実行する。
+
+```bash
+./create.#!/bin/sh
+```
+
+しばらく経ったら、サービスの外向けIPが発行されてるか確認後、そのIPへブラウザでアクセスしてみる。
+
+```bash
+kubectl get service growi --namespace growis
+
+NAME    TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)   AGE
+growi   LoadBalancer   10.3.254.110   [ここのIP]   80:32427/TCP   4m
+```
+
+削除する際は、以下のスクリプトを実行する。
+
+```bash
+./delete.sh
+```
 
 # Other
 
