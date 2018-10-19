@@ -51,3 +51,5 @@ growi   LoadBalancer   10.3.254.110   [ここのIP]   80:32427/TCP   4m
 # TODO
 
 - 本系と違い「データをストレージに分離していない」ので、podが消されてしまうとデータが吹き飛ぶので、永続層に書きたい
+- HTTPS化(DNSとLet'sEncryptで)
+- Funtionを使った遠隔地へのバックアップ
