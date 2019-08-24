@@ -1,0 +1,240 @@
+# define Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: growi-tools
+---
+# Storege
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: growi-ssd
+  namespace: growi-tools
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+  labels:
+    kubernetes.io/cluster-service: "true"
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata: 
+#   name: growi-data
+#   namespace: growi-tools
+# spec:
+#   accessModes:
+#     - ReadWriteOnce
+#   storageClassName: growi-ssd
+#   resources: 
+#     requests:
+#       storage: 4Gi
+---
+# Database(mongo)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+  namespace: growi-tools
+  labels:
+    app: mongo
+spec:
+  serviceName: "mongo"
+  selector:
+    matchLabels:
+      app: mongo
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mongo
+      name: mongo
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+      - name: mongo
+        image: mongo:3.6
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: mongodb-data
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata: 
+      name: mongodb-data
+      namespace: growi-tools
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: growi-ssd
+      resources: 
+        requests:
+          storage: 4Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: growi-tools
+  labels:
+    app: mongo
+spec:
+  ports:
+  - port: 27017
+    protocol: TCP
+    targetPort: 27017
+  selector:
+    app: mongo
+---
+# Elasticsearch
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: elasticsearch
+  namespace: growi-tools
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+      - name: elasticsearch
+        image: elasticsearch:5.3-alpine
+        env:
+        - name: ES_JAVA_OPTS
+          value: "-Xms256m -Xmx256m"
+        command: ["sh", "-c", "./bin/elasticsearch-plugin list | grep -q analysis-kuromoji || ./bin/elasticsearch-plugin install analysis-kuromoji;./bin/elasticsearch-plugin list | grep -q analysis-icu || ./bin/elasticsearch-plugin install analysis-icu;/docker-entrypoint.sh elasticsearch"]
+        ports:
+        - containerPort: 9200
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: elasticsearch
+  name: elasticsearch
+  namespace: growi-tools
+spec:
+  ports:
+  - port: 9200
+    protocol: TCP
+    targetPort: 9200
+  selector:
+    app: elasticsearch
+---
+# Growi Application
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: growi
+  namespace: growi-tools
+  labels:
+    app: growi
+spec:
+  serviceName: "growi"
+  selector:
+    matchLabels:
+      app: growi
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: growi
+      name: growi
+    spec:
+      containers:
+      - name: growi
+        image: weseek/growi:3
+        env:
+        - name: MONGO_URI
+          value: "mongodb://mongo:27017/growi"
+        - name: ELASTICSEARCH_URI
+          value: "http://elasticsearch:9200/growi"
+        - name: PASSWORD_SEED
+          value: "changeme"
+        - name: FILE_UPLOAD
+          value: "local"
+        - name: FORCE_WIKI_MODE
+          value: "private"
+        ports:
+        - containerPort: 3000
+        readinessProbe:
+          httpGet:
+            path: /_api/v3/healthcheck
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: growi-data
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata: 
+      name: growi-data
+      namespace: growi-tools
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: growi-ssd
+      resources: 
+        requests:
+          storage: 4Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: growi
+  namespace: growi-tools
+  labels:
+    app: growi
+  # annotations:
+  #   beta.cloud.google.com/backend-config: '{"ports": {"80":"backend-config-growi"}}'
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: growi
+---
+# Ingress and Certificate and IP settings
+apiVersion: networking.gke.io/v1beta1
+kind: ManagedCertificate
+metadata:
+  name: cert-growi-app
+  namespace: growi-tools
+spec:
+  domains:
+    - dev.wiki.hotstaff-dev.com
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ingress-growi
+  namespace: growi-tools
+  annotations:
+    kubernetes.io/ingress.allow-http: "true"
+    kubernetes.io/ingress.global-static-ip-name: "ip-growi"
+    networking.gke.io/managed-certificates: "cert-growi-app"
+spec:
+  rules:
+  - host: dev.wiki.hotstaff-dev.com
+    http:
+      paths:
+      - path: /*
+        backend:
+          serviceName: growi
+          servicePort: 80
+# ---
+# apiVersion: cloud.google.com/v1beta1
+# kind: BackendConfig
+# metadata:
+#   name: backend-config-growi
+# spec:
+#   securityPolicy:
+#     name: ""
