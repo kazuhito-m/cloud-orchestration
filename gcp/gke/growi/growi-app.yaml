@@ -1,9 +1,15 @@
-apiVersion: extensions/v1beta1
-kind: Deployment
+apiVersion: apps/v1
+kind: StatefulSet
 metadata:
   name: growi
-  namespace: growis
+  namespace: growi-tools
+  labels:
+    app: growi
 spec:
+  serviceName: "growi"
+  selector:
+    matchLabels:
+      app: growi
   replicas: 1
   template:
     metadata:
@@ -13,7 +19,7 @@ spec:
     spec:
       containers:
       - name: growi
-        image: asia.gcr.io/kfa-growi-on-gke/growi-for-compose:3.0
+        image: weseek/growi:3
         env:
         - name: MONGO_URI
           value: "mongodb://mongo:27017/growi"
@@ -21,9 +27,27 @@ spec:
           value: "http://elasticsearch:9200/growi"
         - name: PASSWORD_SEED
           value: "changeme"
+        - name: FILE_UPLOAD
+          value: "local"
+        - name: FORCE_WIKI_MODE
+          value: "private"
         command: ["dockerize", "-wait", "tcp://mongo:27017", "-wait", "tcp://elasticsearch:9200", "-timeout", "60s", "npm", "run", "server:prod"]
         ports:
         - containerPort: 3000
+        volumeMounts:
+        - name: growi-data
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata: 
+      name: growi-data
+      namespace: growi-tools
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: growi-ssd
+      resources: 
+        requests:
+          storage: 4Gi
 ---
 apiVersion: v1
 kind: Service
@@ -31,16 +55,11 @@ metadata:
   labels:
     app: growi
   name: growi
-  namespace: growis
+  namespace: growi-tools
 spec:
-  externalTrafficPolicy: Cluster
   ports:
   - port: 80
     protocol: TCP
     targetPort: 3000
   selector:
     app: growi
-  sessionAffinity: None
-  type: LoadBalancer
-status:
-  loadBalancer: {}

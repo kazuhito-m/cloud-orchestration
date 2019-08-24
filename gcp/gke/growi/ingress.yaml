@@ -1,0 +1,27 @@
+---
+# Ingress and Certificate and IP settings
+apiVersion: networking.gke.io/v1beta1
+kind: ManagedCertificate
+metadata:
+  name: cert-growi-app
+spec:
+  domains:
+    - dev.wiki.hotstaff-dev.com
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ingress-growi
+  annotations:
+    kubernetes.io/ingress.allow-http: "true"
+    kubernetes.io/ingress.global-static-ip-name: "ip-growi"
+    networking.gke.io/managed-certificates: "cert-growi-app"
+spec:
+  rules:
+  - host: dev.wiki.hotstaff-dev.com
+    http:
+      paths:
+      - path: /*
+        backend:
+          serviceName: growi
+          servicePort: 80

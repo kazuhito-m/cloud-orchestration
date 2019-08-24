@@ -2,7 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: elasticsearch
-  namespace: growis
+  namespace: growi-tools
 spec:
   replicas: 1
   template:
@@ -26,7 +26,7 @@ metadata:
   labels:
     app: elasticsearch
   name: elasticsearch
-  namespace: growis
+  namespace: growi-tools
 spec:
   ports:
   - port: 9200
