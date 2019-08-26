@@ -5,105 +5,130 @@ metadata:
   name: growi-tools
 ---
 # Storege
-kind: StorageClass
-apiVersion: storage.k8s.io/v1
-metadata:
-  name: growi-ssd
+## for growi-app
+apiVersion: v1 
+kind: PersistentVolume 
+metadata: 
+  name: pv-growi-app
   namespace: growi-tools
-  annotations:
-    storageclass.kubernetes.io/is-default-class: "false"
-  labels:
-    kubernetes.io/cluster-service: "true"
-provisioner: kubernetes.io/gce-pd
-parameters:
-  type: pd-ssd
-reclaimPolicy: Retain
-allowVolumeExpansion: true
-# ---
-# apiVersion: v1
-# kind: PersistentVolumeClaim
-# metadata: 
-#   name: growi-data
-#   namespace: growi-tools
-# spec:
-#   accessModes:
-#     - ReadWriteOnce
-#   storageClassName: growi-ssd
-#   resources: 
-#     requests:
-#       storage: 4Gi
+spec: 
+  capacity: 
+    storage: 16Gi 
+  accessModes: 
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: sc-growi-app
+  gcePersistentDisk: 
+    pdName: growi-disk-01
+    fsType: ext4 
+--- 
+apiVersion: v1 
+kind: PersistentVolumeClaim 
+metadata: 
+  name: pvc-growi-app
+  namespace: growi-tools
+spec: 
+  accessModes: 
+    - ReadWriteOnce
+  storageClassName: sc-growi-app
+  resources: 
+    requests: 
+      storage: 16Gi
+---
+## for growi-mongodb
+apiVersion: v1 
+kind: PersistentVolume 
+metadata: 
+  name: pv-growi-mongodb
+  namespace: growi-tools
+spec: 
+  capacity: 
+    storage: 16Gi 
+  accessModes: 
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: sc-growi-mongodb
+  gcePersistentDisk: 
+    pdName: growi-disk-02
+    fsType: ext4 
+--- 
+apiVersion: v1 
+kind: PersistentVolumeClaim 
+metadata: 
+  name: pvc-growi-mongodb
+  namespace: growi-tools
+spec: 
+  accessModes: 
+    - ReadWriteOnce
+  storageClassName: sc-growi-mongodb
+  resources: 
+    requests: 
+      storage: 16Gi
 ---
 # Database(mongo)
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: mongo
+  name: growi-mongo
   namespace: growi-tools
   labels:
-    app: mongo
+    app: growi-mongo
 spec:
-  serviceName: "mongo"
+  serviceName: "growi-mongo"
   selector:
     matchLabels:
-      app: mongo
+      app: growi-mongo
   replicas: 1
   template:
     metadata:
       labels:
-        app: mongo
-      name: mongo
+        app: growi-mongo
+      name: growi-mongo
     spec:
       terminationGracePeriodSeconds: 60
       containers:
-      - name: mongo
+      - name: growi-mongo
         image: mongo:3.6
         ports:
         - containerPort: 27017
         volumeMounts:
-        - name: mongodb-data
+        - name: growi-mongodb-data
           mountPath: /data
-  volumeClaimTemplates:
-  - metadata: 
-      name: mongodb-data
-      namespace: growi-tools
-    spec:
-      accessModes:
-        - ReadWriteOnce
-      storageClassName: growi-ssd
-      resources: 
-        requests:
-          storage: 4Gi
+      volumes: 
+      - name: growi-mongodb-data
+        persistentVolumeClaim: 
+          claimName: pvc-growi-mongodb
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: mongo
+  name: sv-growi-mongo
   namespace: growi-tools
   labels:
-    app: mongo
+    app: growi-mongo
 spec:
   ports:
   - port: 27017
     protocol: TCP
     targetPort: 27017
   selector:
-    app: mongo
+    app: growi-mongo
 ---
 # Elasticsearch
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: elasticsearch
+  name: growi-elasticsearch
   namespace: growi-tools
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: elasticsearch
+        app: growi-elasticsearch
     spec:
       containers:
-      - name: elasticsearch
+      - name: growi-elasticsearch
         image: elasticsearch:5.3-alpine
         env:
         - name: ES_JAVA_OPTS
@@ -116,8 +141,8 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: elasticsearch
-  name: elasticsearch
+    app: growi-elasticsearch
+  name: sv-growi-elasticsearch
   namespace: growi-tools
 spec:
   ports:
@@ -125,36 +150,35 @@ spec:
     protocol: TCP
     targetPort: 9200
   selector:
-    app: elasticsearch
+    app: growi-elasticsearch
 ---
 # Growi Application
-apiVersion: apps/v1
-kind: StatefulSet
+apiVersion: extensions/v1beta1
+kind: Deployment
 metadata:
-  name: growi
+  name: growi-app
   namespace: growi-tools
   labels:
-    app: growi
+    app: growi-app
 spec:
-  serviceName: "growi"
   selector:
     matchLabels:
-      app: growi
-  replicas: 2
+      app: growi-app
+  replicas: 1 # 共有ディスクでpodの2つ目を建てようとするとmountでコケる致命的なエラーがあるため、実質1が上限である
   template:
     metadata:
       labels:
-        app: growi
-      name: growi
+        app: growi-app
+      name: growi-app
     spec:
       containers:
-      - name: growi
+      - name: growi-app
         image: weseek/growi:3
         env:
         - name: MONGO_URI
-          value: "mongodb://mongo:27017/growi"
+          value: "mongodb://sv-growi-mongo:27017/growi"
         - name: ELASTICSEARCH_URI
-          value: "http://elasticsearch:9200/growi"
+          value: "http://sv-growi-elasticsearch:9200/growi"
         - name: PASSWORD_SEED
           value: "changeme"
         - name: FILE_UPLOAD
@@ -172,27 +196,18 @@ spec:
         volumeMounts:
         - name: growi-data
           mountPath: /data
-  volumeClaimTemplates:
-  - metadata: 
-      name: growi-data
-      namespace: growi-tools
-    spec:
-      accessModes:
-        - ReadWriteOnce
-      storageClassName: growi-ssd
-      resources: 
-        requests:
-          storage: 4Gi
+      volumes: 
+      - name: growi-data
+        persistentVolumeClaim: 
+          claimName: pvc-growi-app
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: growi
+  name: sv-growi-app
   namespace: growi-tools
   labels:
-    app: growi
-  # annotations:
-  #   beta.cloud.google.com/backend-config: '{"ports": {"80":"backend-config-growi"}}'
+    app: growi-app
 spec:
   type: NodePort
   ports:
@@ -200,7 +215,7 @@ spec:
     protocol: TCP
     targetPort: 3000
   selector:
-    app: growi
+    app: growi-app
 ---
 # Ingress and Certificate and IP settings
 apiVersion: networking.gke.io/v1beta1
@@ -218,7 +233,7 @@ metadata:
   name: ingress-growi
   namespace: growi-tools
   annotations:
-    kubernetes.io/ingress.allow-http: "true"
+    kubernetes.io/ingress.allow-http: "false"
     kubernetes.io/ingress.global-static-ip-name: "ip-growi"
     networking.gke.io/managed-certificates: "cert-growi-app"
 spec:
@@ -228,13 +243,5 @@ spec:
       paths:
       - path: /*
         backend:
-          serviceName: growi
+          serviceName: sv-growi-app
           servicePort: 80
-# ---
-# apiVersion: cloud.google.com/v1beta1
-# kind: BackendConfig
-# metadata:
-#   name: backend-config-growi
-# spec:
-#   securityPolicy:
-#     name: ""
