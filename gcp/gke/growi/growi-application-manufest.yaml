@@ -6,63 +6,63 @@ metadata:
 ---
 # Storege
 ## for growi-app
-apiVersion: v1 
-kind: PersistentVolume 
-metadata: 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
   name: pv-growi-app
   namespace: growi-tools
-spec: 
-  capacity: 
-    storage: 16Gi 
-  accessModes: 
+spec:
+  capacity:
+    storage: 16Gi
+  accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   storageClassName: sc-growi-app
-  gcePersistentDisk: 
+  gcePersistentDisk:
     pdName: growi-disk-01
-    fsType: ext4 
---- 
-apiVersion: v1 
-kind: PersistentVolumeClaim 
-metadata: 
+    fsType: ext4
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
   name: pvc-growi-app
   namespace: growi-tools
-spec: 
-  accessModes: 
+spec:
+  accessModes:
     - ReadWriteOnce
   storageClassName: sc-growi-app
-  resources: 
-    requests: 
+  resources:
+    requests:
       storage: 16Gi
 ---
 ## for growi-mongodb
-apiVersion: v1 
-kind: PersistentVolume 
-metadata: 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
   name: pv-growi-mongodb
   namespace: growi-tools
-spec: 
-  capacity: 
-    storage: 16Gi 
-  accessModes: 
+spec:
+  capacity:
+    storage: 16Gi
+  accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   storageClassName: sc-growi-mongodb
-  gcePersistentDisk: 
+  gcePersistentDisk:
     pdName: growi-disk-02
-    fsType: ext4 
---- 
-apiVersion: v1 
-kind: PersistentVolumeClaim 
-metadata: 
+    fsType: ext4
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
   name: pvc-growi-mongodb
   namespace: growi-tools
-spec: 
-  accessModes: 
+spec:
+  accessModes:
     - ReadWriteOnce
   storageClassName: sc-growi-mongodb
-  resources: 
-    requests: 
+  resources:
+    requests:
       storage: 16Gi
 ---
 # Database(mongo)
@@ -93,10 +93,10 @@ spec:
         - containerPort: 27017
         volumeMounts:
         - name: growi-mongodb-data
-          mountPath: /data
-      volumes: 
+          mountPath: /data/db
+      volumes:
       - name: growi-mongodb-data
-        persistentVolumeClaim: 
+        persistentVolumeClaim:
           claimName: pvc-growi-mongodb
 ---
 apiVersion: v1
@@ -152,6 +152,54 @@ spec:
   selector:
     app: growi-elasticsearch
 ---
+# HackMD
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: growi-hackmd
+  namespace: growi-tools
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: growi-hackmd
+    spec:
+      containers:
+      - name: growi-hackmd
+        image: kazuhito/growi-docker-compose-hackmd
+        env:
+        - name: GROWI_URI
+          value: "https://wiki.dev.example.com"
+        - name: CMD_DB_URL
+          value: "sqlite://dummyhost/hackmd/sqlite/codimd.db"
+        - name: CMD_CSP_ENABLE
+          value: "false"
+        ports:
+        - containerPort: 3000
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: growi-hackmd
+  name: sv-growi-hackmd
+  namespace: growi-tools
+spec:
+  type: NodePort
+  ports:
+  - port: 3010
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: growi-hackmd
+---
 # Growi Application
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -175,6 +223,8 @@ spec:
       - name: growi-app
         image: weseek/growi:3
         env:
+        - name: APP_SITE_URL
+          value: "https://wiki.dev.example.com"
         - name: MONGO_URI
           value: "mongodb://sv-growi-mongo:27017/growi"
         - name: ELASTICSEARCH_URI
@@ -185,6 +235,10 @@ spec:
           value: "local"
         - name: FORCE_WIKI_MODE
           value: "private"
+        - name: HACKMD_URI
+          value: "https://hackmd.dev.example.com"
+        - name: HACKMD_URI_FOR_SERVER
+          value: "http://sv-growi-hackmd:3010"
         ports:
         - containerPort: 3000
         readinessProbe:
@@ -196,9 +250,9 @@ spec:
         volumeMounts:
         - name: growi-data
           mountPath: /data
-      volumes: 
+      volumes:
       - name: growi-data
-        persistentVolumeClaim: 
+        persistentVolumeClaim:
           claimName: pvc-growi-app
 ---
 apiVersion: v1
@@ -225,7 +279,16 @@ metadata:
   namespace: growi-tools
 spec:
   domains:
-    - dev.wiki.hotstaff-dev.com
+    - wiki.dev.example.com
+---
+apiVersion: networking.gke.io/v1beta1
+kind: ManagedCertificate
+metadata:
+  name: cert-growi-hackmd
+  namespace: growi-tools
+spec:
+  domains:
+    - hackmd.dev.example.com
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress
@@ -235,13 +298,20 @@ metadata:
   annotations:
     kubernetes.io/ingress.allow-http: "false"
     kubernetes.io/ingress.global-static-ip-name: "ip-growi"
-    networking.gke.io/managed-certificates: "cert-growi-app"
+    networking.gke.io/managed-certificates: "cert-growi-app,cert-growi-hackmd"
 spec:
   rules:
-  - host: dev.wiki.hotstaff-dev.com
+  - host: wiki.dev.example.com
     http:
       paths:
       - path: /*
         backend:
           serviceName: sv-growi-app
           servicePort: 80
+  - host: hackmd.dev.example.com
+    http:
+      paths:
+      - path: /*
+        backend:
+          serviceName: sv-growi-hackmd
+          servicePort: 3010
