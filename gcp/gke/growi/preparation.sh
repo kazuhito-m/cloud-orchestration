@@ -13,6 +13,6 @@ gcloud compute addresses create ${IP_ID_APP}  \
 
 # Disk作成
 gcloud compute disks create ${DISK_ID_01} ${DISK_ID_02} \
-    --size=16Gi \
+    --size=10Gi \
     --type=pd-ssd \
-    --zone=asia-northeast1-a 
+    --zone=asia-northeast1-a
