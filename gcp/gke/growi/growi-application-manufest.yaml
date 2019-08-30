@@ -239,6 +239,10 @@ spec:
           value: "https://hackmd.dev.example.com"
         - name: HACKMD_URI_FOR_SERVER
           value: "http://sv-growi-hackmd:3010"
+        - name: MATHJAX
+          value: "1"
+        - name: PLANTUML_URI
+          value: "http://www.plantuml.com/plantuml"
         ports:
         - containerPort: 3000
         readinessProbe:
