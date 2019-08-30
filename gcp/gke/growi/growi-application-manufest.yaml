@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: growi-tools
+  name: growi-wiki-parts
 ---
 # Storege
 ## for growi-app
@@ -10,7 +10,7 @@ apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: pv-growi-app
-  namespace: growi-tools
+  namespace: growi-wiki-parts
 spec:
   capacity:
     storage: 10Gi
@@ -26,7 +26,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: pvc-growi-app
-  namespace: growi-tools
+  namespace: growi-wiki-parts
 spec:
   accessModes:
     - ReadWriteOnce
@@ -40,7 +40,7 @@ apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: pv-growi-mongodb
-  namespace: growi-tools
+  namespace: growi-wiki-parts
 spec:
   capacity:
     storage: 10Gi
@@ -56,7 +56,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: pvc-growi-mongodb
-  namespace: growi-tools
+  namespace: growi-wiki-parts
 spec:
   accessModes:
     - ReadWriteOnce
@@ -70,7 +70,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: growi-mongo
-  namespace: growi-tools
+  namespace: growi-wiki-parts
   labels:
     app: growi-mongo
 spec:
@@ -103,7 +103,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: sv-growi-mongo
-  namespace: growi-tools
+  namespace: growi-wiki-parts
   labels:
     app: growi-mongo
 spec:
@@ -119,7 +119,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: growi-elasticsearch
-  namespace: growi-tools
+  namespace: growi-wiki-parts
 spec:
   replicas: 1
   template:
@@ -143,7 +143,7 @@ metadata:
   labels:
     app: growi-elasticsearch
   name: sv-growi-elasticsearch
-  namespace: growi-tools
+  namespace: growi-wiki-parts
 spec:
   ports:
   - port: 9200
@@ -157,7 +157,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: growi-hackmd
-  namespace: growi-tools
+  namespace: growi-wiki-parts
 spec:
   replicas: 1
   template:
@@ -190,7 +190,7 @@ metadata:
   labels:
     app: growi-hackmd
   name: sv-growi-hackmd
-  namespace: growi-tools
+  namespace: growi-wiki-parts
 spec:
   type: NodePort
   ports:
@@ -205,7 +205,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: growi-app
-  namespace: growi-tools
+  namespace: growi-wiki-parts
   labels:
     app: growi-app
 spec:
@@ -263,7 +263,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: sv-growi-app
-  namespace: growi-tools
+  namespace: growi-wiki-parts
   labels:
     app: growi-app
 spec:
@@ -280,7 +280,7 @@ apiVersion: networking.gke.io/v1beta1
 kind: ManagedCertificate
 metadata:
   name: cert-growi-app
-  namespace: growi-tools
+  namespace: growi-wiki-parts
 spec:
   domains:
     - wiki.dev.example.com
@@ -289,7 +289,7 @@ apiVersion: networking.gke.io/v1beta1
 kind: ManagedCertificate
 metadata:
   name: cert-growi-hackmd
-  namespace: growi-tools
+  namespace: growi-wiki-parts
 spec:
   domains:
     - hackmd.dev.example.com
@@ -298,7 +298,7 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: ingress-growi
-  namespace: growi-tools
+  namespace: growi-wiki-parts
   annotations:
     kubernetes.io/ingress.allow-http: "false"
     kubernetes.io/ingress.global-static-ip-name: "ip-growi"
