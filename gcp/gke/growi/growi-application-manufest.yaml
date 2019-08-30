@@ -13,7 +13,7 @@ metadata:
   namespace: growi-tools
 spec:
   capacity:
-    storage: 16Gi
+    storage: 10Gi
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
@@ -33,7 +33,7 @@ spec:
   storageClassName: sc-growi-app
   resources:
     requests:
-      storage: 16Gi
+      storage: 10Gi
 ---
 ## for growi-mongodb
 apiVersion: v1
@@ -43,7 +43,7 @@ metadata:
   namespace: growi-tools
 spec:
   capacity:
-    storage: 16Gi
+    storage: 10Gi
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
@@ -63,7 +63,7 @@ spec:
   storageClassName: sc-growi-mongodb
   resources:
     requests:
-      storage: 16Gi
+      storage: 10Gi
 ---
 # Database(mongo)
 apiVersion: apps/v1
